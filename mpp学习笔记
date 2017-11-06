@@ -1,0 +1,182 @@
+
+计划:
+
+ mpp(1):mpp概念性,包括与hadoop的比较,使用场景各种名词等;
+
+ mpp(2) :mpp架构在数据库中的应用
+
+ mpp(3): PostgreSQL环境搭建与介绍
+
+ mpp(4):Greenplum环境搭建与介绍
+
+ mpp(5): gbase环境搭建与介绍
+
+ mpp(6):teradata
+
+## 概念
+mpp: massively parallel processing,即大规模并行处理；是多个处理单元（process）处理同一程序的不同部分时该程序的协调过程。每个单元内的CPU都有自己的私有单元.在每个单元内都有操作系统和管理数据库的副本.
+
+Shared Nothing架构: 是一种分布式计算架构.这种架构中的每一个节点都是独立的,而且整个系统中没有单点竞争.Shared Nothing架构中不存在单一瓶颈而降低系统运行速度.Shared Nothing架构可以实现并行IO,从物理层面上解决集中存储所面临的I/O瓶颈问题.
+
+![SMP_NUMA_MPP](http://blog.itpub.net/attachment/201502/1/30088512_1422795528u9au.png)
+
+Gbase 8a MPP Cluster，中文全称是：南大通用大规模分布式并行数据库集群系统；是一款**Shared Nothing**架构的分布式并行数据库集群。
+
+SPOF(Single Point of Failure): 单点故障
+
+元数据: 元数据是关于数据的数据.元数据是描述数据仓库内数据的结构和建立方法的数据，可将其按用途的不同分为两类：技术元数据和业务元数据。
+
+心跳: 以固定的频率向其他节点汇报当前节点状态的方式.收到心跳，一般可以认为一个节点和现在的网络拓扑是良好的。当然，心跳汇报时，一般也会携带一些附加的状态、元数据信息，以便管理。
+
+结构化数据:即行数据，存储在数据库里，可以用二维表结构来逻辑表达实现的数据。  
+
+半结构化数据：介于完全结构化数据（如关系型数据库、面向对象数据库中的数据）和完全无结构的数据（如声音、图像文件等）之间的数据，HTML文档就属于半结构化数据。它一般是自描述的，数据的结构和内容混在一起，没有明显的区分。
+
+非结构化数据：不方便用数据库二维逻辑表来表现的数据即称为非结构化数据，包括所有格式的办公文档、文本、图片、XML、HTML、各类报表、图像和音频/视频信息等等。
+
+负载均衡(Load Balance)是分布式系统架构设计中必须考虑的因素之一，它通常是指，将请求/数据【均匀】分摊到多个操作单元上执行，负载均衡的关键在于【均匀】。
+
+![常见的负载均衡方案](https://static.oschina.net/uploads/space/2016/0916/072804_kJyJ_2903254.jpg)
+
+【数据层】的负载均衡，要考虑“数据的均衡”与“请求的均衡”两个点，常见的方式有“按照范围水平切分”与“hash水平切分”
+
+
+## Hadoop 与 Mpp
+  理解一些概念: 分布式,并行,集群
+
+[到底什么是集群&分布式](http://blog.csdn.net/u013142781/article/details/51307229)
+
+[科普：并行计算、分布式计算、集群计算和云计算](http://blog.csdn.net/wm_1991/article/details/50257269)
+
+  明确并行计算和分布式计算的区别;
+  明确并行存储和分布式存储的区别.
+
+  mpp架构数据库: 任务并行执行,分布式计算和分布式存储.
+
+  应用场景
+  用MPP处理PB级别的、高质量的结构化数据，同时为应用提供丰富的SQL和事务支持能力；用Hadoop实现半结构化、非结构化数据处理。这样可同时满足结构化、半结构化和非结构化数据的处理需求。
+
+
+
+## MPP架构在数据库中应用
+
+MPP关键词: **管理**,**计算**,**存储**
+
+MPP数据库的一个重要特征是，**计算和存储是紧耦合的**。每一张表的数据打散存储到每个计算节点上面。为了确保查询结果的正确性，每个计算节点都需要参与每条查询的执行中.
+
+  <电信网技术> 杂志!!!
+
+在Greenplum Database中主节点作为整个分布式系统集群的大脑，负责接收客户连接，处理请求。跟PostgreSQL一样，对于每一个连接请求，Greenplum Database都会在主节点上面fork一个Postgres Server（我们称之为QD）进程出来，负责处理这个连接提交的查询语句。
+
+解析器:对于每一条进来的查询语句，QD进程中的解析器执行语法分析和词法分析，生成解析树。
+
+优化器: 优化器根据解析器生成的解析树，生成查询计划。查询计划描述了如何执行查询。查询计划的优劣直接影响查询的执行效率。
+
+调度器: 调度器是负责分配处理查询需要的计算资源，将查询计划发送到每个计算节点。
+
+
+
+
+## Gbase 8a
+  ### 概念
+
+  联邦架构 : 部分节点作为主节点,主节点构成一个独立集群,主节点掌握元数据,元数据一致性和集群协议通信范围限于主节点集群内,工作节点只维持工作数据,主节点和工作节点之间通过心跳维持集群工作
+
+  GBase联邦是非对称部署的,即原来的架构要求GCluster,GCware,GNode三个组件在每一个节点上部署(对称部署),在联邦架构中,可以分别部署(8611版本中,GCluster和GCware仍需部署在一个节点上)
+
+  GCluster:负责SQL的解析、优化、分布式执行计划生成、执行调度
+
+  GCware:用于各节点GCluster实例间共享信息,以及控制多副本数据操作时,提供可操作节点,控制各节点数据一致性状态
+
+  GNode:负责数据在节点上的实际存储,并从GCluster 接收和执行经分解的SQL 执行计划,执行结果返回给GCluste.
+
+  coordinator节点:
+  gcluster进程名:gclusterd;
+  gcware进程名: corosync;
+  自恢复进程名: gcrecover ;
+  监控工具名: gcmonit/gcmmonit
+
+
+  data节点:
+  gnode进程名: gbased ;
+  syncserver进程名: gcsync ;
+
+
+
+
+  在集群中用gcadmin命令,查看'GBase coordinator cluster information' 以及'Gbase Data cluster information'.
+
+  ![gcadmin命令查看](http://om35suyvs.bkt.clouddn.com/17-3-13/48515480-file_1489373342752_2035.png)
+
+  由上图可知,coordinator节点: GCluster和GCware;  Data节点: gnode和syncserver
+
+
+  gccli: 集群客户端
+
+  节点间mpp,节点内smp.
+
+  ### 架构
+![Gbase架构](http://om35suyvs.bkt.clouddn.com/17-3-7/41972166-file_1488854462185_1469.png)
+- 有中心(Master)架构
+
+  计算和存储分布,管理集中,Master节点会有单点故障的问题,以及由于只有一个管理节点,所以Master节点会成为性能瓶颈,并发数受限.
+
+- 无中心架构
+  计算,存储,管理都在一个节点上,
+
+- 联邦架构(Federation)  
+
+  **在线扩容**:根据随机算法,通过直接搬分片文件的方式进行扩展,可以快速完成集群扩容.
+![gbase线性动态扩展](http://om35suyvs.bkt.clouddn.com/17-3-7/27193353-file_1488897658421_221c.png)
+
+ **高可用机制**:一个物理节点可以放置多个分片,其分片的副本也可以分散在多台物理节点上,这样当一个物理节点宕机后,敀障可以切换到存放副本分片的多台物理节点之上,从而使故障节点的负载被多台节点所承担.
+
+ **并行加载**
+
+ ![gbase并行加载](http://om35suyvs.bkt.clouddn.com/17-3-7/50322809-file_1488898460706_1565b.png)
+
+ **系统逻辑架构**
+
+![gbase系统逻辑架构](http://om35suyvs.bkt.clouddn.com/17-3-7/23511658-file_1488898677054_16d17.png)
+
+GCluster,GCware,GNode都是逻辑上的.
+
+在gbase 8a mpp集群中,GCware的作用和hadoop2.0联邦架构中的zookeeper的作用相似.Gcware一般与Master节点重合部署.
+
+![GBase 8a Mpp功能架构图](http://om35suyvs.bkt.clouddn.com/17-3-9/87909720-file_1489040961739_14426.png)
+
+> 在联邦架构的集群内部,无论是处理协调调度的GCluster层,还是实际进行数据处理的GNode层,都构成了各自处理层的集群结构,从而解决了集群的单点瓶颈或单点故障问题.而对于集群内部的数据元数据和集群结构元数据的一致性范围,在联邦架构下,仅仅局限在了上层的主节点集群上(GCluster集群),这样达成元数据一致性所需要的节点之间的广播也将被约束到小范围节点内,从而防止了因节点数增加而导致的节点间广播量的膨胀,对于更大规模的处理工作集群(GNode集群),因为节点之间不需要达成共享元数据的一致性,所以这一层集群节点间不存在复杂的广播通信机制(节点之间除了副本数据同步,以及在执行join或者Aggregation运算时的节点之间的拉表处理等外,节点之间不存在P2P的通信).
+
+> 作为GNode集群状态的维护,主要通过上层集群(GCluster)节点与下层集群(GNode)节点之间的Heartbeat简易通信机制来实现(简易的HB机制是有别于集群层面的协议的,HB机制主要用于两点之间的死活确认,而不需要在集群中的多个节点间具备达成状态一致性的通信算法).这样联邦架构下的可扩展性因素中,就突破了集群协议的规模限制,考虑到GCluster节点上最大Socket 张开数等物理限制条件和并发处理数等,最大合理的集群数可以达到300节点的程度.
+
+
+GCware达成元数据一致性,在节点之间的广播,可以参考zookeeper的原子广播.
+
+## 参考来源
+1. [shared nothing architecture](http://blog.chinaunix.net/uid-27714502-id-3712684.html)
+
+2. [数据仓库技术中的MPP](http://www.dedecms.com/knowledge/data-base/generalized/2012/0703/2510.html)
+
+3. [greenplum数据库引擎探究](http://www.cnblogs.com/daduxiong/archive/2010/10/13/1850411.html)
+
+4. [Gbase 8a MPP Cluster 技术白皮书](http://www.gbase.cn/download.html)
+
+5. [关于MYSQL在线扩容和缩容](http://bucketli.iteye.com/blog/1294032)
+
+6. [数据仓库架构的变迁](https://segmentfault.com/a/1190000007419222)
+
+7. [Gbase 8aMPP:一种新型关系数据库的设计与实践](http://www.doc88.com/p-7793594077441.html)  
+
+8. [数据仓库与元数据](http://blog.csdn.net/yangxin114/article/details/7267861)
+
+9. [MPP数据库及应用案例](http://wenku.baidu.com/link?url=niQ5-F68KrcRD4F4H0BTeNMiksnZd0EZAH-IUGqGxIOyxwFs_iCTd-m2HSOXqzNlJPlO4ISdbR02EukQw83bh5f3fWbjSXz8HbixYnx_pVby9nnWOe5rq9bVA41Y8-R_)
+
+10. [一分钟了解负载均衡的一切](http://www.oschina.net/news/77156/load-balance)
+
+11. [基于MPP架构的TERADATA技术预览](http://blog.itpub.net/30088512/viewspace-1423022/)
+
+12. [并行与分布式的区别](http://blog.csdn.net/haiross/article/details/36897867)
+
+13. [大数据数据库的技术对垒：MapReduce vs. MPP](http://blog.csdn.net/bigdatacommunity/article/details/49869599)
+
+14. [Hadoop与MPP是什么关系?](http://www.d1net.com/bigdata/news/355798.html)
